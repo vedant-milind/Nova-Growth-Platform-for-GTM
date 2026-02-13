@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Lead-to-Delivery Pipeline{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kanban-column { min-width: 200px; border-radius: 16px; padding: 1rem; }
+    [data-theme="light"] .kanban-column { background: #f1f5f9; border: 1px solid #e2e8f0; }
+    [data-theme="dark"] .kanban-column { background: rgba(30, 41, 59, 0.6); }
+    .kanban-column-cards { min-height: 120px; }
+    .kanban-card { border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+    [data-theme="light"] .kanban-card { background: #fff; border: 1px solid #e2e8f0; color: #1e293b; }
+    [data-theme="dark"] .kanban-card { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; }
+    .kanban-card .owner-badge { font-size: 0.65rem; }
+    .stage-label { font-size: 0.75rem; text-transform: uppercase; }
+    [data-theme="light"] .stage-label { color: #64748b; }
+    [data-theme="dark"] .stage-label { color: #94a3b8; }
+    .kanban-card-actions { display: flex; align-items: center; gap: 0.25rem; margin-top: 0.5rem; }
+    .btn-arrow { padding: 0.2rem 0.4rem; font-size: 0.9rem; }
+    .btn-ticket { padding: 0.2rem 0.5rem; font-size: 0.7rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">Lead-to-Delivery Pipeline</h1>
+    <div class="d-flex align-items-center gap-2">
+        <span class="theme-muted small">Your role:</span>
+        <select id="user-role" class="form-select form-select-sm" style="width: auto;">
+            <option value="Sales">Sales</option>
+            <option value="Operations">Operations</option>
+            <option value="Delivery">Delivery</option>
+        </select>
+    </div>
+</div>
+
+<p class="theme-muted small mb-4">Quality Gate: Proposal → Contract requires AI Readiness ≥ {{ ai_threshold }}. Use <strong>→</strong> to move right only. Confirm before each move. Use <strong>Ticket</strong> to report mistakes.</p>
+
+<div class="d-flex gap-3 pb-3" style="min-height: 400px; overflow-x: auto;">
+    {% for stage in stages %}
+    <div class="kanban-column flex-shrink-0" style="width: 240px;" data-stage="{{ stage }}">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="stage-label">{{ stage.replace('_', ' ') }}</span>
+            <span class="badge bg-secondary owner-badge">{{ stage_owners[stage] }}</span>
+        </div>
+        <div class="kanban-column-cards" data-stage="{{ stage }}">
+            {% for opp in by_stage[stage] %}
+            <div class="kanban-card" data-opp-id="{{ opp.id }}" data-client-id="{{ opp.client_id }}" data-ai-score="{{ opp.client.ai_readiness_score or 0 }}" data-stage="{{ stage }}">
+                <div class="theme-text small fw-bold">{{ opp.client.name }}</div>
+                <div class="theme-muted" style="font-size: 0.75rem;">{{ opp.name or '—' }}</div>
+                <div class="mt-1"><span class="badge bg-dark owner-badge">{{ opp.primary_owner }}</span> AI: {{ opp.client.ai_readiness_score or 0 }}</div>
+                <div class="kanban-card-actions">
+                    {% set stage_idx = stages.index(stage) %}
+                    {% if stage_idx < stages|length - 1 %}
+                    <button type="button" class="btn btn-sm btn-outline-primary btn-arrow move-right-btn" title="Move to {{ stages[stage_idx + 1].replace('_', ' ') }}">
+                        <i class="bi bi-arrow-right"></i>
+                    </button>
+                    {% endif %}
+                    <button type="button" class="btn btn-sm btn-outline-danger btn-ticket ticket-btn" title="Generate ticket for mistake">
+                        <i class="bi bi-ticket-perforated"></i> Ticket
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Confirm Move Modal -->
+<div class="modal fade" id="confirmMoveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--card-border);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title theme-text">Confirm Move</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body theme-text">
+                <p class="mb-0">Are you sure you're doing the right thing? This will move <strong id="confirm-client-name"></strong> from <strong id="confirm-from-stage"></strong> to <strong id="confirm-to-stage"></strong>.</p>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirm-move-btn">Yes, Move</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Ticket Modal -->
+<div class="modal fade" id="ticketModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--card-border);">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title theme-text">Generate Ticket</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="theme-muted small mb-2">Describe the mistake or issue for <strong class="theme-text" id="ticket-client-name"></strong>:</p>
+                <input type="hidden" id="ticket-opp-id">
+                <textarea class="form-control" id="ticket-message" rows="3" placeholder="e.g. Moved to wrong stage by accident, incorrect data entered..."></textarea>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="ticket-submit-btn">Generate Ticket</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const stages = {{ stages|tojson }};
+    const stageOwners = {{ stage_owners|tojson }};
+    const aiThreshold = {{ ai_threshold }};
+
+    let pendingMove = null;
+
+    document.querySelectorAll('.move-right-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.kanban-card');
+            const oppId = card.dataset.oppId;
+            const clientName = card.querySelector('.theme-text.fw-bold')?.textContent || 'this record';
+            const fromStage = card.dataset.stage;
+            const fromIdx = stages.indexOf(fromStage);
+            const toStage = stages[fromIdx + 1];
+            const aiScore = parseInt(card.dataset.aiScore || 0);
+            const userRole = document.getElementById('user-role').value;
+
+            if (fromStage === 'proposal' && toStage === 'contract' && aiScore < aiThreshold) {
+                if (typeof showToast === 'function') showToast(`Quality Gate: AI Readiness must be ≥${aiThreshold}. Current: ${aiScore}.`, 'danger');
+                return;
+            }
+
+            const requiredOwner = stageOwners[toStage] || 'Sales';
+            if (userRole !== requiredOwner) {
+                if (typeof showToast === 'function') showToast(`Decision Authority required. Primary Owner for this stage is ${requiredOwner}.`, 'warning');
+                return;
+            }
+
+            pendingMove = { card, oppId, fromStage, toStage, requiredOwner };
+            document.getElementById('confirm-client-name').textContent = clientName;
+            document.getElementById('confirm-from-stage').textContent = fromStage.replace(/_/g, ' ');
+            document.getElementById('confirm-to-stage').textContent = toStage.replace(/_/g, ' ');
+            new bootstrap.Modal(document.getElementById('confirmMoveModal')).show();
+        });
+    });
+
+    document.getElementById('confirm-move-btn').addEventListener('click', () => {
+        if (!pendingMove) return;
+        const { card, oppId, toStage, requiredOwner } = pendingMove;
+        const userRole = document.getElementById('user-role').value;
+
+        fetch(`/api/opportunity/${oppId}/move`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stage: toStage, user_role: userRole })
+        })
+        .then(r => r.json())
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('confirmMoveModal')).hide();
+            if (data.ok) {
+                if (typeof showToast === 'function') showToast('Moved successfully', 'success');
+                window.location.reload();
+            } else {
+                if (typeof showToast === 'function') showToast(data.error || 'Move failed', 'danger');
+            }
+            pendingMove = null;
+        })
+        .catch(() => {
+            bootstrap.Modal.getInstance(document.getElementById('confirmMoveModal')).hide();
+            if (typeof showToast === 'function') showToast('Move failed', 'danger');
+            pendingMove = null;
+        });
+    });
+
+    document.querySelectorAll('.ticket-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const card = btn.closest('.kanban-card');
+            const oppId = card.dataset.oppId;
+            const clientName = card.querySelector('.theme-text.fw-bold')?.textContent || 'this record';
+            document.getElementById('ticket-opp-id').value = oppId;
+            document.getElementById('ticket-client-name').textContent = clientName;
+            document.getElementById('ticket-message').value = '';
+            new bootstrap.Modal(document.getElementById('ticketModal')).show();
+        });
+    });
+
+    document.getElementById('ticket-submit-btn').addEventListener('click', () => {
+        const oppId = document.getElementById('ticket-opp-id').value;
+        const message = document.getElementById('ticket-message').value.trim();
+        if (!message) {
+            if (typeof showToast === 'function') showToast('Please describe the mistake.', 'warning');
+            return;
+        }
+        fetch('/api/pipeline-ticket', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ opportunity_id: parseInt(oppId), message })
+        })
+        .then(r => r.json())
+        .then(data => {
+            bootstrap.Modal.getInstance(document.getElementById('ticketModal')).hide();
+            if (data.ok) {
+                if (typeof showToast === 'function') showToast('Ticket generated successfully', 'success');
+            } else {
+                if (typeof showToast === 'function') showToast(data.error || 'Failed', 'danger');
+            }
+        })
+        .catch(() => {
+            if (typeof showToast === 'function') showToast('Failed to create ticket', 'danger');
+        });
+    });
+});
+</script>
+{% endblock %}

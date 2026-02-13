@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Account — {{ client.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('client_detail', id=client.id) }}">{{ client.name }}</a></li>
+        <li class="breadcrumb-item active">Analyze</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-4 theme-text">Analyze Account: {{ client.name }}</h1>
+
+<p class="theme-muted">Enter Delivery Team Notes. The LLM will extract: Potential AI Use Cases, Technical Blockers, and Key Stakeholders. Output is saved to the Client Account Profile.</p>
+
+<form method="post" id="analyze-form">
+    <div class="mb-3">
+        <label for="delivery_notes" class="form-label">Delivery Team Notes</label>
+        <textarea class="form-control" id="delivery_notes" name="delivery_notes" rows="8" placeholder="Paste or type delivery notes here...">{{ client.delivery_notes or '' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary" id="btn-analyze">
+        <span class="btn-text">Analyze & Save to CAP</span>
+        <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+    </button>
+    <a href="{{ url_for('client_detail', id=client.id) }}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+
+<div id="result-preview" class="mt-4 d-none">
+    <div class="card metric-card">
+        <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 theme-text">Extraction Result (saved to CAP)</h6></div>
+        <div class="card-body theme-text">
+            <p><strong>Potential AI Use Cases:</strong></p>
+            <ul id="result-use-cases"></ul>
+            <p><strong>Technical Blockers:</strong></p>
+            <ul id="result-blockers"></ul>
+            <p><strong>Key Stakeholders:</strong></p>
+            <ul id="result-stakeholders"></ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('analyze-form').addEventListener('submit', function(e) {
+    const btn = document.getElementById('btn-analyze');
+    const notes = document.getElementById('delivery_notes').value.trim();
+    if (!notes) {
+        e.preventDefault();
+        alert('Please enter delivery notes.');
+        return;
+    }
+    // Optional: submit via fetch for AJAX, then redirect
+    e.preventDefault();
+    btn.disabled = true;
+    btn.querySelector('.btn-text').classList.add('d-none');
+    btn.querySelector('.spinner-border').classList.remove('d-none');
+    const formData = new FormData(this);
+    fetch('{{ url_for("analyze_account", id=client.id) }}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('result-use-cases').innerHTML = (data.potential_ai_use_cases || []).map(x => '<li>' + x + '</li>').join('');
+        document.getElementById('result-blockers').innerHTML = (data.technical_blockers || []).map(x => '<li>' + x + '</li>').join('');
+        document.getElementById('result-stakeholders').innerHTML = (data.key_stakeholders || []).map(x => '<li>' + x + '</li>').join('');
+        document.getElementById('result-preview').classList.remove('d-none');
+        setTimeout(() => window.location.href = '{{ url_for("client_detail", id=client.id) }}', 1500);
+    })
+    .catch(() => { btn.disabled = false; btn.querySelector('.btn-text').classList.remove('d-none'); btn.querySelector('.spinner-border').classList.add('d-none'); });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    .cap-card { border-radius: 16px; padding: 1.5rem; }
+    [data-theme="light"] .cap-card { background: #fff; border: 1px solid #e2e8f0; }
+    [data-theme="dark"] .cap-card { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15); }
+    .cap-card.guardrail-violation { border: 2px solid #dc3545; animation: pulse-red 1.5s infinite; }
+    @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); } 50% { box-shadow: 0 0 0 8px rgba(220,53,69,0); } }
+    .cap-quadrant { padding: 1rem; border-radius: 12px; margin-bottom: 1rem; }
+    [data-theme="light"] .cap-quadrant { background: #f8fafc; }
+    [data-theme="dark"] .cap-quadrant { background: rgba(0,0,0,0.2); }
+    .cap-toggle .btn { border-radius: 2rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="theme-muted">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('clients') }}" class="theme-muted">Clients</a></li>
+        <li class="breadcrumb-item active theme-text">{{ client.name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">{{ client.name }}</h1>
+    <div>
+        {% if can_view_confidential %}
+        <button type="button" class="btn btn-outline-warning btn-sm" id="btn-validate-deal">Validate Deal</button>
+        <a href="{{ url_for('analyze_account', id=client.id) }}" class="btn btn-primary">Analyze Account</a>
+        <a href="{{ url_for('add_risk_flag') }}?client_id={{ client.id }}" class="btn btn-outline-danger">Add Risk Flag</a>
+        {% endif %}
+        {% if can_grant_permissions %}
+        <a href="{{ url_for('client_edit', id=client.id) }}" class="btn btn-outline-secondary btn-sm">Edit Assignment</a>
+        <a href="{{ url_for('client_permissions', id=client.id) }}" class="btn btn-outline-secondary btn-sm">Manage Permissions</a>
+        {% endif %}
+    </div>
+</div>
+{% if not can_view_confidential %}
+<div class="alert alert-info py-2 mb-3">You do not have access to confidential data for this client. Contact your CEO or Strategy Lead to request access.</div>
+{% endif %}
+
+<!-- Interactive CAP Card - Glassmorphism with Services/Product Toggle -->
+<div class="cap-card {% if guardrail_warnings %}guardrail-violation{% endif %}">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="theme-text mb-0">Client Account Profile (CAP)</h5>
+        <div class="cap-toggle btn-group" role="group">
+            <a href="{{ url_for('client_detail', id=client.id, view='services') }}" class="btn btn-sm {% if cap_view == 'services' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Services View</a>
+            <a href="{{ url_for('client_detail', id=client.id, view='product') }}" class="btn btn-sm {% if cap_view == 'product' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Product View</a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">Operational Context</h6>
+                <p class="theme-text mb-0 small">{{ client.legacy_systems or '—' }}</p>
+                <p class="theme-text mb-0 small mt-1">Last update: {{ (client.last_delivery_update or '').strftime('%Y-%m-%d') if client.last_delivery_update else '—' }}</p>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">Relationship Map</h6>
+                {% if can_view_confidential %}
+                {% set stakeholders = client.key_stakeholders|fromjson %}
+                {% for s in stakeholders[:3] %}<span class="badge bg-secondary me-1">{{ s }}</span>{% endfor %}
+                {% if not stakeholders %}<span class="theme-muted small">—</span>{% endif %}
+                {% else %}<span class="theme-muted small">—</span>{% endif %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">AI Readiness Score</h6>
+                <div class="progress" style="height: 1.5rem; background: rgba(0,0,0,0.3);">
+                    <div class="progress-bar {% if client.ai_readiness_score >= 70 %}bg-success{% elif client.ai_readiness_score >= 40 %}bg-warning{% else %}bg-secondary{% endif %}" role="progressbar" style="width: {{ client.ai_readiness_score or 0 }}%">{{ client.ai_readiness_score or 0 }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">Current Guardrail Flags</h6>
+                {% if guardrail_warnings %}
+                {% for w in guardrail_warnings %}
+                <span class="badge bg-danger me-1">{{ w[:50] }}...</span>
+                {% endfor %}
+                {% else %}
+                <span class="badge bg-success">None</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle content: Services View vs Product View -->
+    {% if can_view_confidential %}
+    {% if cap_view == 'services' %}
+    <div class="mt-3 pt-3 border-top border-secondary">
+        <h6 class="theme-muted mb-2">Embedded Team Notes (Services View)</h6>
+        <p class="theme-text small mb-0" style="white-space: pre-wrap;">{{ client.delivery_notes or 'No notes yet.' }}</p>
+    </div>
+    {% else %}
+    <div class="mt-3 pt-3 border-top border-secondary">
+        <h6 class="theme-muted mb-2">Modular AI Readiness (Product View)</h6>
+        {% set use_cases = client.ai_use_cases|fromjson %}
+        <p class="theme-text small mb-1"><strong>Potential AI Use Cases:</strong></p>
+        <ul class="small theme-text">{% for u in use_cases %}<li>{{ u }}</li>{% else %}<li class="text-muted">—</li>{% endfor %}</ul>
+        <p class="theme-text small mb-1"><strong>Technical Blockers:</strong></p>
+        <ul class="small theme-text">{% for b in (client.technical_blockers|fromjson) %}<li>{{ b }}</li>{% else %}<li class="text-muted">—</li>{% endfor %}</ul>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Assignment, Approval & AI Feature -->
+    <div class="row g-3 mt-2">
+        <div class="col-md-4">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">Employee Working On</h6>
+                <p class="theme-text mb-0 small">{% if client.assigned_to %}{{ client.assigned_to.full_name }}{% else %}— Not assigned{% endif %}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">Approver</h6>
+                <p class="theme-text mb-0 small">{% if client.approver %}{{ client.approver.full_name }}{% else %}— Not set{% endif %}</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="cap-quadrant">
+                <h6 class="text-uppercase theme-muted mb-2">AI Feature Request</h6>
+                <p class="theme-text mb-0 small">{% if client.ai_feature_request %}{{ client.ai_feature_request[:80] }}{% if client.ai_feature_request|length > 80 %}...{% endif %}{% else %}— Not specified{% endif %}</p>
+            </div>
+        </div>
+    </div>
+    <div class="mt-3 pt-3 border-top border-secondary">
+        <h6 class="theme-muted mb-2">Review History</h6>
+        {% if reviews %}
+        <ul class="small theme-text mb-0">
+            {% for r in reviews %}
+            <li>{{ r.reviewed_by.full_name }} — {{ r.reviewed_at.strftime('%Y-%m-%d %H:%M') }}{% if r.notes %}: {{ r.notes[:50] }}{% if r.notes|length > 50 %}...{% endif %}{% endif %}</li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="theme-muted small mb-0">No reviews yet.</p>
+        {% endif %}
+        {% if can_view_confidential %}
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btn-mark-reviewed">Mark as Reviewed</button>
+        {% endif %}
+    </div>
+</div>
+
+{% if can_view_confidential %}
+<div class="row g-3 mt-3">
+    <div class="col-md-6">
+        <div class="card metric-card">
+            <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 theme-text">Profile Summary</h6></div>
+            <div class="card-body theme-text">
+                <p class="mb-1"><strong>Revenue:</strong> ${{ "{:,.0f}".format(client.revenue or 0) }}</p>
+                <p class="mb-1"><strong>Services / AI:</strong> ${{ "{:,.0f}".format(client.services_revenue or 0) }} / ${{ "{:,.0f}".format(client.ai_product_revenue or 0) }}</p>
+                <p class="mb-1"><strong>Trust Level:</strong> {{ client.trust_level or 50 }}/100</p>
+                <p class="mb-1"><strong>Priority Score:</strong> {{ "{:,.2f}".format(priority_score) }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    {% if guardrail_warnings %}
+    if (typeof showToast === 'function') {
+        showToast('{{ guardrail_warnings[0][:100]|e }}...', 'warning');
+    }
+    {% endif %}
+    document.getElementById('btn-mark-reviewed')?.addEventListener('click', () => {
+        fetch('/api/client/{{ client.id }}/review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notes: '' })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok && typeof showToast === 'function') {
+                showToast('Marked as reviewed', 'success');
+                window.location.reload();
+            }
+        });
+    });
+    document.getElementById('btn-validate-deal') && document.getElementById('btn-validate-deal').addEventListener('click', () => {
+        fetch('/validate_deal/{{ client.id }}')
+            .then(r => r.json())
+            .then(data => {
+                if (data.ok) {
+                    if (typeof showToast === 'function') showToast('No guardrail violations.', 'success');
+                } else {
+                    data.warnings.forEach(w => {
+                        if (typeof showToast === 'function') showToast(w, 'warning');
+                    });
+                }
+            });
+    });
+});
+</script>
+{% endblock %}

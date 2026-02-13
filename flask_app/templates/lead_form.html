@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if lead else 'Add' }} Lead{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('leads') }}" class="theme-muted">Leads</a></li>
+        <li class="breadcrumb-item active theme-text">{{ 'Edit' if lead else 'Add' }} Lead</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-4 theme-text">{{ 'Edit' if lead else 'Add' }} California Government Lead</h1>
+
+<form method="post" action="{{ url_for('lead_edit', id=lead.id) if lead else url_for('lead_add') }}">
+    <div class="card metric-card mb-3">
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="name" class="form-label theme-text">Organization Name</label>
+                <input type="text" class="form-control" id="name" name="name" value="{{ lead.name if lead else '' }}" required placeholder="e.g. California Dept of Public Services">
+            </div>
+            <div class="mb-3">
+                <label for="department" class="form-label theme-text">Department</label>
+                <input type="text" class="form-control" id="department" name="department" value="{{ lead.department if lead else '' }}" placeholder="e.g. Dept of Public Services">
+            </div>
+            <div class="mb-3">
+                <label for="contact_info" class="form-label theme-text">Contact Info</label>
+                <input type="text" class="form-control" id="contact_info" name="contact_info" value="{{ lead.contact_info if lead else '' }}" placeholder="Email, phone, or key contact">
+            </div>
+            <div class="mb-3">
+                <label for="status" class="form-label theme-text">Status</label>
+                <select class="form-select" id="status" name="status">
+                    {% for s in stages %}
+                    <option value="{{ s }}" {% if lead and lead.status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if lead %}
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="last_contacted" name="last_contacted">
+                <label class="form-check-label theme-text" for="last_contacted">Mark as contacted today</label>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label for="notes" class="form-label theme-text">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ lead.notes if lead else '' }}</textarea>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('leads') }}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{% endblock %}

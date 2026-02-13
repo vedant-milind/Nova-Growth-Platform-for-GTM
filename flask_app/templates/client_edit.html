@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Edit — {{ client.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="theme-muted">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('client_detail', id=client.id) }}" class="theme-muted">{{ client.name }}</a></li>
+        <li class="breadcrumb-item active theme-text">Edit</li>
+    </ol>
+</nav>
+
+<h1 class="h3 mb-4 theme-text">Edit Assignment & AI Feature — {{ client.name }}</h1>
+
+<form method="post">
+    <div class="card metric-card mb-3">
+        <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 theme-text">Assignment & Approval</h6></div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="assigned_to_id" class="form-label theme-text">Employee Working on Client</label>
+                <select class="form-select" id="assigned_to_id" name="assigned_to_id">
+                    <option value="">— Not assigned —</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if client.assigned_to_id == u.id %}selected{% endif %}>{{ u.full_name }} ({{ u.role }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="approver_id" class="form-label theme-text">Responsible for Approval</label>
+                <select class="form-select" id="approver_id" name="approver_id">
+                    <option value="">— Not set —</option>
+                    {% for u in users %}
+                    <option value="{{ u.id }}" {% if client.approver_id == u.id %}selected{% endif %}>{{ u.full_name }} ({{ u.role }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="card metric-card mb-3">
+        <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 theme-text">AI Feature Request</h6></div>
+        <div class="card-body">
+            <label for="ai_feature_request" class="form-label theme-text">What AI feature does the client want to build?</label>
+            <textarea class="form-control" id="ai_feature_request" name="ai_feature_request" rows="4" placeholder="e.g. Document automation, predictive analytics, chatbot for citizen services...">{{ client.ai_feature_request or '' }}</textarea>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{{ url_for('client_detail', id=client.id) }}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{% endblock %}

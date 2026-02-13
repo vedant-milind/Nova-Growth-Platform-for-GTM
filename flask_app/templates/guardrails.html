@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Guardrail Status Center{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4 theme-text">Guardrail Status Center</h1>
+
+<p class="theme-muted mb-4">Opportunities that violate these guardrails are flagged in the sidebar and on client profiles.</p>
+
+<div class="row g-3">
+    <div class="col-md-7">
+        <div class="card metric-card">
+            <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 theme-text">All Guardrails</h6></div>
+            <div class="card-body">
+                {% for g in definitions %}
+                <div class="d-flex align-items-start mb-3">
+                    <span class="badge bg-secondary me-2">{{ g.id }}</span>
+                    <div>
+<strong class="theme-text">{{ g.title }}</strong>
+                    <p class="theme-muted small mb-0">{{ g.rule }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card metric-card">
+            <div class="card-header bg-transparent border-secondary"><h6 class="mb-0 text-high-risk">Current Violations</h6></div>
+            <div class="card-body">
+                {% for v in violations %}
+                <div class="mb-3 p-2 rounded" style="background: rgba(220, 53, 69, 0.15); border-left: 4px solid #dc3545;">
+                    <a href="{{ url_for('client_detail', id=v.client.id) }}" class="text-high-risk fw-bold">{{ v.client.name }}</a>
+                    {% for w in v.warnings[:2] %}
+                    <p class="small theme-muted mb-0 mt-1">{{ w }}</p>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="theme-text small mb-0">No violations.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

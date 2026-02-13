@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Permissions — {{ client.name }}{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}" class="theme-muted">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('client_detail', id=client.id) }}" class="theme-muted">{{ client.name }}</a></li>
+        <li class="breadcrumb-item active theme-text">Permissions</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">Confidential Access — {{ client.name }}</h1>
+    <a href="{{ url_for('client_detail', id=client.id) }}" class="btn btn-outline-secondary">Back to Client</a>
+</div>
+
+<p class="theme-muted mb-4">Grant employees access to view confidential client data (revenue, CAP details, delivery notes). CEO and Strategy Lead have full access by default.</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, msg in messages %}
+<div class="alert alert-{{ category }} py-2 mb-3">{{ msg }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="card metric-card">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0 theme-text">Employees with Access</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table theme-table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Email</th>
+                        <th>Granted</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emp in employees %}
+                    <tr>
+                        <td class="theme-text">{{ emp.full_name }}</td>
+                        <td class="theme-muted">{{ emp.email }}</td>
+                        <td>
+                            {% if emp.id in granted_ids %}
+                            <span class="badge bg-success badge-status">Yes</span>
+                            {% else %}
+                            <span class="badge bg-secondary badge-status">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if emp.id in granted_ids %}
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="user_id" value="{{ emp.id }}">
+                                <input type="hidden" name="action" value="revoke">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Revoke</button>
+                            </form>
+                            {% else %}
+                            <form method="post" class="d-inline">
+                                <input type="hidden" name="user_id" value="{{ emp.id }}">
+                                <input type="hidden" name="action" value="grant">
+                                <button type="submit" class="btn btn-sm btn-primary">Grant</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4" class="theme-muted">No employees in the system.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Leads — CA Government Prospects{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">California Government Leads</h1>
+    <a href="{{ url_for('lead_add') }}" class="btn btn-primary">Add Lead</a>
+</div>
+
+<p class="theme-muted mb-4">Track outreach and conversion for 50 CA government prospects. Convert qualified leads to clients.</p>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, msg in messages %}
+<div class="alert alert-{{ category }} py-2 mb-3">{{ msg }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="row mb-3">
+    <div class="col">
+        <div class="card metric-card">
+            <div class="card-body py-2">
+                <span class="theme-muted">Converted:</span> <strong class="theme-text">{{ converted_count }}</strong> / {{ leads|length }} leads
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card metric-card">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0 theme-text">Lead Conversion Funnel</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            {% for stage in stages %}
+            <div class="col-md-4 col-lg-2">
+                <div class="p-3 rounded-3" style="background: rgba(255,255,255,0.03); border: 1px solid var(--card-border);">
+                    <h6 class="text-uppercase theme-muted small mb-2">{{ stage }}</h6>
+                    {% for lead in by_stage[stage] %}
+                    <div class="mb-2">
+                        <a href="{{ url_for('lead_edit', id=lead.id) }}" class="theme-link small d-block">{{ lead.name }}</a>
+                        {% if lead.converted_to_client_id and can_grant_permissions %}
+                        <a href="{{ url_for('client_detail', id=lead.converted_to_client_id) }}" class="badge bg-success badge-status">Client</a>
+                        {% endif %}
+                        {% if not lead.converted_to_client_id and stage != 'converted' and stage != 'lost' and can_grant_permissions %}
+                        <form method="post" action="{{ url_for('lead_convert', id=lead.id) }}" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-primary py-0">Convert</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <span class="theme-muted small">—</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card metric-card mt-4">
+    <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center">
+        <h5 class="mb-0 theme-text">All Leads</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table theme-table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Status</th>
+                        <th>Last Contacted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lead in leads %}
+                    <tr>
+                        <td><a href="{{ url_for('lead_edit', id=lead.id) }}" class="theme-link">{{ lead.name }}</a></td>
+                        <td class="theme-text">{{ lead.department or '—' }}</td>
+                        <td><span class="badge {% if lead.status == 'converted' %}bg-success{% elif lead.status == 'lost' %}bg-secondary{% else %}bg-info{% endif %} badge-status">{{ lead.status }}</span></td>
+                        <td class="theme-text">{{ lead.last_contacted_at.strftime('%Y-%m-%d') if lead.last_contacted_at else '—' }}</td>
+                        <td>
+                            <a href="{{ url_for('lead_edit', id=lead.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                            {% if lead.converted_to_client_id %}
+                            <a href="{{ url_for('client_detail', id=lead.converted_to_client_id) }}" class="btn btn-sm btn-outline-primary">View Client</a>
+                            {% elif can_grant_permissions %}
+                            <form method="post" action="{{ url_for('lead_convert', id=lead.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-primary">Convert</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="theme-muted">No leads yet. <a href="{{ url_for('lead_add') }}" class="theme-link">Add one</a>.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

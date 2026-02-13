@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Clients & Priority Score{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">Client Priority Score</h1>
+    {% if can_grant_permissions %}<a href="{{ url_for('client_add') }}" class="btn btn-primary">Add Client</a>{% endif %}
+</div>
+
+<p class="theme-muted mb-4">Priority = (Revenue × AI Readiness) / Days Since Last Update</p>
+
+<div class="card metric-card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table theme-table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Assigned To</th>
+                        <th>Revenue</th>
+                        <th>AI Readiness</th>
+                        <th>Days Since Update</th>
+                        <th>Priority Score</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        <td><a href="{{ url_for('client_detail', id=r.client.id) }}" class="theme-link">{{ r.client.name }}</a></td>
+                        <td class="theme-text small">{{ r.client.assigned_to.full_name if r.client.assigned_to else '—' }}</td>
+                        <td>{% if r.can_view_confidential %}${{ "{:,.0f}".format(r.client.revenue or 0) }}{% else %}—{% endif %}</td>
+                        <td>{{ r.client.ai_readiness_score }}</td>
+                        <td>{{ "%.1f"|format(r.days_since_update) }}</td>
+                        <td><strong>{{ "{:,.2f}".format(r.priority_score) }}</strong></td>
+                        <td>
+                            {% if r.priority_score >= 10000 %}
+                            <span class="badge bg-success badge-status">High Priority</span>
+                            {% elif r.priority_score >= 1000 %}
+                            <span class="badge bg-info badge-status">Medium</span>
+                            {% elif r.priority_score >= 100 %}
+                            <span class="badge bg-warning text-dark badge-status">Monitor</span>
+                            {% else %}
+                            <span class="badge bg-secondary badge-status">Low</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.can_view_confidential %}
+                            <a href="{{ url_for('analyze_account', id=r.client.id) }}" class="btn btn-sm btn-outline-danger">Analyze</a>
+                            <a href="{{ url_for('add_risk_flag') }}?client_id={{ r.client.id }}" class="btn btn-sm btn-outline-danger">Risk Flag</a>
+                            {% endif %}
+                            <a href="{{ url_for('client_detail', id=r.client.id) }}" class="btn btn-sm btn-outline-light">CAP</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="theme-muted">No clients. <a href="{{ url_for('client_add') }}" class="theme-link">Add one</a>.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

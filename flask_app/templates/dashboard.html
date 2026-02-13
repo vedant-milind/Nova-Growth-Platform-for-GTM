@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+
+{% block title %}Command Center{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0 theme-text">Command Center Dashboard</h1>
+</div>
+
+<!-- Strategic Intervention Alerts (real-time) -->
+<div id="strategic-intervention-alerts"></div>
+
+<!-- Services vs AI Balance -->
+<div class="row g-3 mb-4 metric-cards-row">
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body theme-text">
+                <h6 class="text-uppercase mb-2 theme-muted">Services Revenue</h6>
+                <h3 class="mb-0 text-nowrap">{% if can_view_confidential %}${{ "{:,.0f}".format(services_revenue) }}{% else %}—{% endif %}</h3>
+                <div class="progress progress-theme mt-2" style="height: 8px;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ (services_revenue / (services_revenue + ai_revenue) * 100) if (services_revenue + ai_revenue) > 0 else 100 }}%; background: linear-gradient(90deg, #E63D2E, #FF7A00);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body theme-text">
+                <h6 class="text-uppercase mb-2 theme-muted">AI Products Revenue</h6>
+                <h3 class="mb-0 text-nowrap">{% if can_view_confidential %}${{ "{:,.0f}".format(ai_revenue) }}{% else %}—{% endif %}</h3>
+                <div class="progress progress-theme mt-2" style="height: 8px;">
+                    <div class="progress-bar" role="progressbar" style="width: {{ (ai_revenue / (services_revenue + ai_revenue) * 100) if (services_revenue + ai_revenue) > 0 else 0 }}%; background: linear-gradient(90deg, #FF7A00, #FFC800);"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body theme-text">
+                <h6 class="text-uppercase mb-2 theme-muted">Revenue Velocity</h6>
+                <h3 class="mb-0 text-nowrap">{% if can_view_confidential %}${{ "{:,.0f}".format(revenue_velocity) }}<small class="fs-6 theme-muted">/day</small>{% else %}—{% endif %}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card h-100">
+            <div class="card-body theme-text">
+                <h6 class="text-uppercase mb-2 theme-muted">Account Health</h6>
+                <h3 class="mb-0 text-nowrap">{{ account_health }}<small class="fs-6 theme-muted">/100</small></h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Trust-Revenue Matrix (4 quadrants) -->
+<div class="card metric-card mb-4">
+    <div class="card-header bg-transparent border-secondary">
+        <h5 class="mb-0 theme-text">Trust–Revenue Matrix</h5>
+        <small class="theme-muted">High Trust / Low AI = Prime targets | Low Trust / High AI = High-risk</small>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="p-3 rounded-3" style="background: rgba(255, 122, 0, 0.08); border: 1px solid rgba(255, 122, 0, 0.3);">
+                    <h6 class="mb-2 theme-text"><i class="bi bi-star-fill me-1"></i>Prime Targets (High Trust / Low AI)</h6>
+                    {% for e in trust_revenue_matrix.high_trust_low_ai %}
+                    <a href="{{ url_for('client_detail', id=e.id) }}" class="d-block theme-link small mb-1">{{ e.name }}</a>
+                    {% else %}
+                    <span class="theme-muted small">—</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 rounded-3" style="background: rgba(230, 61, 46, 0.1); border: 1px solid rgba(230, 61, 46, 0.35);">
+                    <h6 class="mb-2 text-high-risk"><i class="bi bi-exclamation-triangle me-1"></i>High-Risk (Low Trust / High AI)</h6>
+                    {% for e in trust_revenue_matrix.low_trust_high_ai %}
+                    <a href="{{ url_for('client_detail', id=e.id) }}" class="d-block theme-link small mb-1">{{ e.name }}</a>
+                    {% else %}
+                    <span class="theme-muted small">—</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 rounded-3" style="background: rgba(255, 200, 0, 0.1); border: 1px solid rgba(255, 200, 0, 0.35);">
+                    <h6 class="mb-2 theme-text">High Trust / High AI</h6>
+                    {% for e in trust_revenue_matrix.high_trust_high_ai %}
+                    <a href="{{ url_for('client_detail', id=e.id) }}" class="d-block theme-link small mb-1">{{ e.name }}</a>
+                    {% else %}
+                    <span class="theme-muted small">—</span>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="p-3 rounded-3 quadrant-low-trust">
+                    <h6 class="theme-muted mb-2">Low Trust / Low AI</h6>
+                    {% for e in trust_revenue_matrix.low_trust_low_ai %}
+                    <a href="{{ url_for('client_detail', id=e.id) }}" class="d-block theme-link small mb-1">{{ e.name }}</a>
+                    {% else %}
+                    <span class="theme-muted small">—</span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Overview with CAP links -->
+<div class="card metric-card overflow-hidden">
+    <div class="card-header bg-transparent border-secondary d-flex justify-content-between align-items-center rounded-top">
+        <h5 class="mb-0 theme-text">Client Overview</h5>
+        {% if can_grant_permissions %}<a href="{{ url_for('client_add') }}" class="btn btn-sm btn-primary">Add Client</a>{% endif %}
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table theme-table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Assigned To</th>
+                        <th>AI Readiness</th>
+                        <th>Services / AI Revenue</th>
+                        <th>Last Update</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in clients %}
+                    <tr>
+                        <td><a href="{{ url_for('client_detail', id=c.id) }}" class="theme-link">{{ c.name }}</a></td>
+                        <td class="theme-text small">{{ c.assigned_to.full_name if c.assigned_to else '—' }}</td>
+                        <td>
+                            <span class="badge {% if c.ai_readiness_score >= 70 %}bg-success{% elif c.ai_readiness_score >= 40 %}bg-warning text-dark{% else %}bg-secondary{% endif %} badge-status">
+                                {{ c.ai_readiness_score }}
+                            </span>
+                        </td>
+                        <td>{% if (client_perms or {}).get(c.id) %}${{ "{:,.0f}".format(c.services_revenue or c.revenue or 0) }} / ${{ "{:,.0f}".format(c.ai_product_revenue or 0) }}{% else %}—{% endif %}</td>
+                        <td>{{ (c.last_delivery_update or '').strftime('%Y-%m-%d') if c.last_delivery_update else '—' }}</td>
+                        <td>
+                            <a href="{{ url_for('client_detail', id=c.id, view='services') }}" class="btn btn-sm btn-outline-secondary">CAP</a>
+                            {% if (client_perms or {}).get(c.id) %}<a href="{{ url_for('analyze_account', id=c.id) }}" class="btn btn-sm btn-outline-danger">Analyze</a>{% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="theme-muted">No clients yet. <a href="{{ url_for('client_add') }}" class="theme-link">Add one</a>.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Future-Forward: Coming Soon -->
+<div class="row g-3 mt-3">
+    <div class="col-md-4">
+        <div class="card metric-card opacity-75">
+            <div class="card-body">
+                <span class="badge mb-2" style="background: linear-gradient(135deg, #E63D2E, #FF7A00); border-radius: 8px;">Coming Soon</span>
+                <h6 class="theme-text">AI-Assisted CAP Enrichment</h6>
+                <p class="small theme-muted mb-0">LLM agent scans CA government budget filings to auto-update "Problem Priority" in CAP.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card opacity-75">
+            <div class="card-body">
+                <span class="badge mb-2" style="background: linear-gradient(135deg, #FF7A00, #FFC800); border-radius: 8px;">Beta</span>
+                <h6 class="theme-text">Synthetic Capacity Planner</h6>
+                <p class="small theme-muted mb-0">What-If: Move consultants from Account A to launch AI Pilot at B — impact on delivery quality.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card metric-card opacity-75">
+            <div class="card-body">
+                <span class="badge mb-2" style="background: linear-gradient(135deg, #FF7A00, #FFC800); border-radius: 8px;">Beta</span>
+                <h6 class="theme-text">Strategic Timing — PitchBook & Gartner</h6>
+                <p class="small theme-muted mb-0">Integrate PitchBook and Gartner reports to identify companies going for funding rounds and prioritize which accounts to engage for business development.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ALERT_MAIN = document.getElementById('strategic-intervention-alerts');
+function fetchAlerts() {
+    fetch('/api/alerts').then(r => r.json()).then(flags => {
+        if (flags.length === 0) { ALERT_MAIN.innerHTML = ''; return; }
+        ALERT_MAIN.innerHTML = flags.map(f => `
+            <div class="alert alert-danger alert-dismissible alert-intervention mb-2" data-flag-id="${f.id}">
+                <strong><i class="bi bi-exclamation-octagon me-1"></i>Strategic Intervention</strong><br>
+                <small><strong>${f.client_name}</strong>${f.project_name ? ' — ' + f.project_name : ''}</small><br>${f.message}
+                <button type="button" class="btn-close" onclick="acknowledge(${f.id})"></button>
+            </div>
+        `).join('');
+    }).catch(() => {});
+}
+function acknowledge(id) {
+    fetch(`/api/alerts/${id}/acknowledge`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }).then(() => fetchAlerts());
+}
+fetchAlerts();
+setInterval(fetchAlerts, 3000);
+</script>
+{% endblock %}

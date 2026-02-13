@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Add Risk Flag{% endblock %}
+
+{% block content %}
+<h1 class="h3 mb-4 theme-text">Add Risk Flag</h1>
+
+<p class="theme-muted mb-4">Delivery Team members can add a Risk Flag. This triggers a <strong>Strategic Intervention</strong> alert on the Operations Manager's dashboard in real time.</p>
+
+{% if not clients %}
+<div class="alert alert-info theme-text">You do not have access to add risk flags for any clients. Contact your CEO or Strategy Lead to request access.</div>
+{% else %}
+<form method="post" id="risk-flag-form">
+    <div class="mb-3">
+        <label for="client_id" class="form-label">Client</label>
+        <select class="form-select" id="client_id" name="client_id" required>
+            <option value="">Select client...</option>
+            {% for c in clients %}
+            <option value="{{ c.id }}" {% if request.args.get('client_id')|int == c.id %}selected{% endif %}>{{ c.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label for="project_name" class="form-label">Project Name (optional)</label>
+        <input type="text" class="form-control" id="project_name" name="project_name" placeholder="e.g. Process Automation Pilot">
+    </div>
+    <div class="mb-3">
+        <label for="message" class="form-label">Risk Message *</label>
+        <textarea class="form-control" id="message" name="message" rows="4" required placeholder="Describe the risk or concern..."></textarea>
+    </div>
+    <div class="mb-3">
+        <label for="severity" class="form-label">Severity</label>
+        <select class="form-select" id="severity" name="severity">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high" selected>High</option>
+            <option value="critical">Critical</option>
+        </select>
+    </div>
+    <button type="submit" class="btn btn-danger">Add Risk Flag</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+
+<div id="success-msg" class="alert alert-success mt-3 d-none">Risk flag added. Operations Manager will see the Strategic Intervention alert.</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('risk-flag-form')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const form = this;
+    const formData = new FormData(form);
+    fetch('{{ url_for("add_risk_flag") }}', {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        document.getElementById('success-msg').classList.remove('d-none');
+        form.reset();
+        setTimeout(() => window.location.href = '{{ url_for("dashboard") }}', 2000);
+    })
+    .catch(() => form.submit());
+});
+</script>
+{% endblock %}
