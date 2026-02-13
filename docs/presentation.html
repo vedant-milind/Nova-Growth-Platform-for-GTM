@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation — Client → Opportunity → Delivery System</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        .slide { min-height: 100vh; padding: 3rem 4rem; display: flex; flex-direction: column; justify-content: center; }
+        .slide h1 { font-size: 2.5rem; color: #38bdf8; margin-bottom: 1rem; }
+        .slide h2 { font-size: 1.5rem; color: #94a3b8; margin: 2rem 0 1rem; }
+        .slide p, .slide li { font-size: 1.1rem; line-height: 1.6; margin-bottom: 0.5rem; }
+        .slide ul { margin-left: 2rem; }
+        .slide .subtitle { color: #64748b; font-size: 1rem; }
+        .slide .highlight { background: #1e293b; padding: 1rem 1.5rem; border-radius: 0.5rem; border-left: 4px solid #3b82f6; margin: 1rem 0; }
+        .slide .flow { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin: 1rem 0; }
+        .slide .flow span { background: #334155; padding: 0.5rem 1rem; border-radius: 0.25rem; }
+        .slide .flow .arrow { color: #64748b; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 1rem; }
+        .nav { position: fixed; bottom: 2rem; right: 2rem; display: flex; gap: 0.5rem; }
+        .nav button { background: #334155; color: #e2e8f0; border: none; padding: 0.5rem 1rem; border-radius: 0.25rem; cursor: pointer; }
+        .nav button:hover { background: #475569; }
+        .back { position: fixed; top: 1rem; left: 1rem; }
+        .back a { color: #64748b; text-decoration: none; }
+        .back a:hover { color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div class="back"><a href="index.html">← Back to landing</a></div>
+    <div id="slides">
+        <section class="slide">
+            <h1>Client → Opportunity → Delivery System</h1>
+            <p class="subtitle">Operations Manager Performance Task</p>
+            <p>Services & AI Platform | California Public Sector</p>
+            <p style="margin-top: 2rem;">Designing a scalable system for lead-to-delivery with trust preservation</p>
+        </section>
+
+        <section class="slide">
+            <h1>Objective</h1>
+            <p>Design a system that:</p>
+            <ul>
+                <li>Maintains shared understanding of each client</li>
+                <li>Guides services expansion and AI product adoption</li>
+                <li>Moves smoothly: Lead → Opportunity → Contract → Delivery</li>
+                <li>Preserves trust across sales, operations, and delivery</li>
+            </ul>
+            <div class="highlight">Realistic to implement in 3–6 months, no major restructuring</div>
+        </section>
+
+        <section class="slide">
+            <h1>Part 1: Client Account Profile</h1>
+            <p>Five sections — mandatory vs optional, continuous vs periodic updates</p>
+            <div class="two-col">
+                <div>
+                    <h2>Mandatory</h2>
+                    <ul>
+                        <li>Client Overview</li>
+                        <li>Current Engagement</li>
+                    </ul>
+                </div>
+                <div>
+                    <h2>Optional (as needed)</h2>
+                    <ul>
+                        <li>Systems & Constraints</li>
+                        <li>AI Opportunity Signals</li>
+                        <li>Decision History</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="slide">
+            <h1>Part 2: Lead to Delivery Flow</h1>
+            <div class="flow">
+                <span>Lead/Account</span><span class="arrow">→</span>
+                <span>Opportunity</span><span class="arrow">→</span>
+                <span>Proposal</span><span class="arrow">→</span>
+                <span>Contract</span><span class="arrow">→</span>
+                <span>Delivery Kickoff</span>
+            </div>
+            <p>Each stage: purpose, entry criteria, owner, contributors, approval point</p>
+            <p><strong>Handoffs:</strong> Sales → Ops at qualification; Ops → Delivery at contract</p>
+        </section>
+
+        <section class="slide">
+            <h1>Part 3: Guardrails</h1>
+            <ul>
+                <li><strong>Services first</strong> for new relationships</li>
+                <li><strong>Product readiness</strong> — 6+ months engagement, use case documented</li>
+                <li><strong>Pilot before scale</strong> — 3–6 month pilots unless prior success</li>
+                <li><strong>Handoff checklist</strong> — capacity confirmed before contract</li>
+                <li><strong>Trust preservation</strong> — never undermine services trust</li>
+            </ul>
+        </section>
+
+        <section class="slide">
+            <h1>Part 5 & 6: Feedback & Incentives</h1>
+            <h2>Feedback Loops</h2>
+            <ul>
+                <li>Delivery → Sales (weekly sync, milestones, risks)</li>
+                <li>Profile enrichment (every touch, quarterly review)</li>
+            </ul>
+            <h2>Incentive Alignment</h2>
+            <p><strong>Tension:</strong> Sales speed vs delivery readiness</p>
+            <p><strong>Mechanism:</strong> Handoff checklist + metric (proposal→kickoff time) + policy (commission tied to kickoff)</p>
+        </section>
+
+        <section class="slide">
+            <h1>Prototype & Next Steps</h1>
+            <p>Working Streamlit prototype with all features</p>
+            <ul>
+                <li>Dashboard, Client Profile, Lead-Delivery Flow</li>
+                <li>Guardrails, Example Walkthrough, Feedback Loops</li>
+                <li>Incentive Alignment, System Overview</li>
+            </ul>
+            <p style="margin-top: 2rem;"><strong>Deploy:</strong> Streamlit Cloud + GitHub Pages</p>
+        </section>
+    </div>
+
+    <div class="nav">
+        <button onclick="prev()">← Prev</button>
+        <button onclick="next()">Next →</button>
+    </div>
+
+    <script>
+        let current = 0;
+        const slides = document.querySelectorAll('.slide');
+        function show() {
+            slides.forEach((s, i) => s.style.display = i === current ? 'flex' : 'none');
+        }
+        function next() { current = Math.min(current + 1, slides.length - 1); show(); }
+        function prev() { current = Math.max(current - 1, 0); show(); }
+        show();
+    </script>
+</body>
+</html>
